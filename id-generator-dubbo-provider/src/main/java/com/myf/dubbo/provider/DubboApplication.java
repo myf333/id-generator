@@ -3,8 +3,12 @@ package com.myf.dubbo.provider;
 import com.myf.id.intf.IdService;
 import com.myf.id.service.IdServiceImpl;
 import com.myf.id.service.provider.PropertyMachineIdProvider;
+import org.apache.dubbo.config.ApplicationConfig;
+import org.apache.dubbo.config.ProtocolConfig;
 import org.apache.dubbo.config.RegistryConfig;
+import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -42,6 +46,11 @@ public class DubboApplication {
         @Value("${id.generator.machineId}")
         private long machineId;
 
+        @Autowired
+        private ApplicationConfig applicationConfig;
+        @Autowired
+        private ProtocolConfig protocolConfig;
+
         @Bean
         public RegistryConfig registryConfig() {
             RegistryConfig registryConfig = new RegistryConfig();
@@ -49,16 +58,29 @@ public class DubboApplication {
             return registryConfig;
         }
 
-//        @Bean
-//        public IdService idService(){
-//            PropertyMachineIdProvider propertyMachineIdProvider = new PropertyMachineIdProvider();
-//            propertyMachineIdProvider.setMachineId(machineId);
-//
-//            IdServiceImpl idService = new IdServiceImpl();
-//            idService.setMachineIdProvider(propertyMachineIdProvider);
-//
-//            idService.init();
-//            return idService;
-//        }
+        @Bean
+        public ServiceConfig<IdService> idServiceServiceConfig(){
+            ServiceConfig<IdService> serviceConfig = new ServiceConfig<>();
+            serviceConfig.setApplication(applicationConfig);
+            serviceConfig.setRegistry(registryConfig()); // 多个注册中心可以用setRegistries()
+            serviceConfig.setProtocol(protocolConfig); // 多个协议可以用setProtocols()
+            serviceConfig.setInterface(IdService.class);
+            serviceConfig.setRef(idService());
+            //serviceConfig.setVersion("1.0.0");
+            serviceConfig.export();
+            return serviceConfig;
+        }
+
+        @Bean
+        public IdService idService(){
+            PropertyMachineIdProvider propertyMachineIdProvider = new PropertyMachineIdProvider();
+            propertyMachineIdProvider.setMachineId(machineId);
+
+            IdServiceImpl idService = new IdServiceImpl();
+            idService.setMachineIdProvider(propertyMachineIdProvider);
+
+            idService.init();
+            return idService;
+        }
     }
 }
